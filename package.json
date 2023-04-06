@@ -1,0 +1,29 @@
+{
+  "name": "message-db-viewer",
+  "version": "0.0.0",
+  "description": "A tool for viewing MessageDb",
+  "scripts": {
+    "messagedb:up": "docker run -d --name message-db -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust message-db",
+    "messagedb:down": "docker stop message-db",
+    "messagedb:rm": "docker rm message-db",
+    "seed": "node seed-message.mjs",
+    "start": "node index.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stetsmando/message-db-viewer.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stetsmando/message-db-viewer/issues"
+  },
+  "homepage": "https://github.com/stetsmando/message-db-viewer#readme",
+  "dependencies": {
+    "@fastify/cors": "^8.2.1",
+    "dotenv": "^16.0.3",
+    "fastify": "^4.15.0",
+    "message-db-connector": "^0.0.10",
+    "open": "^9.1.0"
+  }
+}

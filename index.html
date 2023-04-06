@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MessageDb Viewer</title>
+</head>
+<body>
+  <h2>Categories</h2>
+  <ul id="categoriesList"></ul>
+
+  <h2>Streams <span id="streamsLabel"></span></h2>
+  <ul id="streamsList"></ul>
+
+  <h2>Messages <span id="messagesLabel"></span></h2>
+  <ol id="messagesList" start="0"></ol>
+
+  <h2>Message</h2>
+  <p id="message"></p>
+</body>
+<script>
+  const categoriesList = document.getElementById('categoriesList');
+  const streamsList = document.getElementById('streamsList');
+  const messagesList = document.getElementById('messagesList');
+
+  const streamsLabel = document.getElementById('streamsLabel');
+  const messagesLabel = document.getElementById('messagesLabel');
+
+  const messageDisplay = document.getElementById('message');
+
+  function handleMessageClick(event) {
+    const message = event.target.getAttribute('message');
+    messageDisplay.innerHTML = null;
+    fetch(`http://localhost:8000/message/${message}`)
+      .then(res => res.json())
+      .then(({ message }) => {
+        console.log(message);
+        messageDisplay.innerHTML = '<pre>' + JSON.stringify(message, null, 2) + '</pre>';
+      })
+  }
+
+  function handleStreamClick(event) {
+    const stream = event.target.getAttribute('stream');
+    messagesList.innerHTML = null;
+    messagesLabel.innerText = `(${stream})`;
+    fetch(`http://localhost:8000/stream/${stream}`)
+      .then(res => res.json())
+      .then(({ messages }) => {
+        messages.sort((a, b) => a.postion - b.postion);
+        for (const message of messages) {
+          const messagesListElement = document.createElement('li');
+          messagesListElement.setAttribute('message', message.id);
+          messagesListElement.innerText = message.type;
+          messagesListElement.addEventListener('click', handleMessageClick);
+          messagesListElement.style.cursor = 'pointer';
+          messagesList.appendChild(messagesListElement);
+        }
+      })
+  }
+
+  function handleCategoryClick(event) {
+    const category = event.target.getAttribute('category');
+    streamsList.innerHTML = null;
+    streamsLabel.innerText = `(${category})`;
+    fetch(`http://localhost:8000/category/${category}/streams`)
+      .then(res => res.json())
+      .then(({ streams }) => {
+        for (const stream of streams) {
+          const streamsListElement = document.createElement('li');
+          streamsListElement.setAttribute('stream', stream);
+          streamsListElement.innerText = stream;
+          streamsListElement.addEventListener('click', handleStreamClick);
+          streamsListElement.style.cursor = 'pointer';
+          streamsList.appendChild(streamsListElement);
+        }
+      })
+  }
+
+  setTimeout(() => {
+    fetch('http://localhost:8000')
+      .then(res => res.json())
+      .then((res) => {
+        for (const category of res.categories) {
+          const categoryListElement = document.createElement('li');
+          categoryListElement.innerText = category;
+          categoryListElement.addEventListener('click', handleCategoryClick);
+          categoryListElement.setAttribute('category', category);
+          categoryListElement.style.cursor = 'pointer';
+          categoriesList.appendChild(categoryListElement);
+        }
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }, 0);
+</script>
+</html>
