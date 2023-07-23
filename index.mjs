@@ -86,8 +86,6 @@ fastify.route({
     const SQL = 'SELECT * FROM get_stream_messages($1)'
     const messages = (await (await readerPromise).db.query(SQL, [stream])).rows;
 
-    console.log(JSON.stringify(messages, null, 2))
-
     res.send({ messages });
   },
 });
@@ -100,8 +98,6 @@ fastify.route({
     console.log('id', id);
     const SQL = `SELECT * FROM messages WHERE id = '${id}'`;
     const message = (await (await readerPromise).db.query(SQL)).rows[0];
-
-    console.log(message);
 
     res.send({ message });
   }
