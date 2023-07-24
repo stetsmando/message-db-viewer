@@ -5,94 +5,106 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MessageDb Viewer</title>
+
+  <style>
+    select {
+      display: block;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid;
+    }
+
+    table {
+      width: 100%;
+      max-width: 1200px;
+      height: 400px;
+      display: block;
+      overflow-x: auto;
+      border-spacing: 0;
+    }
+
+    tbody {
+      white-space: nowrap;
+    }
+
+    th,
+    td {
+      padding: 5px 10px;
+      border-top-width: 0;
+      border-left-width: 0;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      vertical-align: bottom;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right-width: 0;
+    }
+
+    tr:last-child td {
+      border-bottom-width: 0;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head>
 <body>
-  <h2>Categories</h2>
-  <ul id="categoriesList"></ul>
+  <h2>Message Explorer</h2>
+  <label for="categoriesSelection">Categories</label>
+  <select name="categories" id="categorySelection">
+    <option value="-1">--</option>
+  </select>
+  <table id="messagesTable">
+    <thead>
+      <tr>
+        <th>Id</th>
+        <th>Stream Name</th>
+        <th>Type</th>
+        <th>Position</th>
+        <th>Global Position</th>
+        <th>Data</th>
+        <th>Meta Data</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+  </table>
 
-  <h2>Streams <span id="streamsLabel"></span></h2>
-  <ul id="streamsList"></ul>
+  <hr>
 
-  <h2>Messages <span id="messagesLabel"></span></h2>
-  <ol id="messagesList" start="0"></ol>
-
-  <h2>Message</h2>
-  <p id="message"></p>
+  <h2>Trace Search</h2>
+  <label for="traceSearch">Trace Id: </label>
+  <input id="traceSearch" type="search">
+  <button id="submitTraceSearch">Search</button>
+  <br>
+  <h2>Graph View</h2>
+  <svg id="container" width="960" height="500" style="border: 1px solid gray;"></svg>
+  <div>
+    <label for="graphMessage">Message Data</label>
+    <pre id="graphMessage"></pre>
+  </div>
+  <br>
+  <h2>Tree View</h2>
+  <svg id="tree" width="960" height="500" style="border: 1px solid gray;"></svg>
+  <div>
+    <label for="treeMessage">Message Data</label>
+    <pre id="treeMessage"></pre>
+  </div>
 </body>
 <script>
-  const categoriesList = document.getElementById('categoriesList');
-  const streamsList = document.getElementById('streamsList');
-  const messagesList = document.getElementById('messagesList');
-
-  const streamsLabel = document.getElementById('streamsLabel');
-  const messagesLabel = document.getElementById('messagesLabel');
-
-  const messageDisplay = document.getElementById('message');
-
-  function handleMessageClick(event) {
-    const message = event.target.getAttribute('message');
-    messageDisplay.innerHTML = null;
-    fetch(`http://localhost:8000/message/${message}`)
-      .then(res => res.json())
-      .then(({ message }) => {
-        console.log(message);
-        messageDisplay.innerHTML = '<pre>' + JSON.stringify(message, null, 2) + '</pre>';
-      })
-  }
-
-  function handleStreamClick(event) {
-    const stream = event.target.getAttribute('stream');
-    messagesList.innerHTML = null;
-    messagesLabel.innerText = `(${stream})`;
-    fetch(`http://localhost:8000/stream/${stream}`)
-      .then(res => res.json())
-      .then(({ messages }) => {
-        messages.sort((a, b) => a.postion - b.postion);
-        for (const message of messages) {
-          const messagesListElement = document.createElement('li');
-          messagesListElement.setAttribute('message', message.id);
-          messagesListElement.innerText = message.type;
-          messagesListElement.addEventListener('click', handleMessageClick);
-          messagesListElement.style.cursor = 'pointer';
-          messagesList.appendChild(messagesListElement);
-        }
-      })
-  }
-
-  function handleCategoryClick(event) {
-    const category = event.target.getAttribute('category');
-    streamsList.innerHTML = null;
-    streamsLabel.innerText = `(${category})`;
-    fetch(`http://localhost:8000/category/${category}/streams`)
-      .then(res => res.json())
-      .then(({ streams }) => {
-        for (const stream of streams) {
-          const streamsListElement = document.createElement('li');
-          streamsListElement.setAttribute('stream', stream);
-          streamsListElement.innerText = stream;
-          streamsListElement.addEventListener('click', handleStreamClick);
-          streamsListElement.style.cursor = 'pointer';
-          streamsList.appendChild(streamsListElement);
-        }
-      })
-  }
-
-  setTimeout(() => {
-    fetch('http://localhost:8000')
-      .then(res => res.json())
-      .then((res) => {
-        for (const category of res.categories) {
-          const categoryListElement = document.createElement('li');
-          categoryListElement.innerText = category;
-          categoryListElement.addEventListener('click', handleCategoryClick);
-          categoryListElement.setAttribute('category', category);
-          categoryListElement.style.cursor = 'pointer';
-          categoriesList.appendChild(categoryListElement);
-        }
-      })
-      .catch(error => {
-        console.log(error);
-      });
-  }, 0);
+  const orange = '#FD9520';
+  const blue = '#1482FA';
+  const green = '#15BA4F';
+  const GRAPH_NODE_SIZE = 40;
+  const GRAPH_LINK_DISTANCE = 130;
 </script>
+<script src="./graph.mjs"></script>
+<script src="./tree.mjs"></script>
+<script src="./index.mjs"></script>
 </html>

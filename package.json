@@ -6,8 +6,10 @@
     "messagedb:up": "docker run -d --name message-db -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust message-db",
     "messagedb:down": "docker stop message-db",
     "messagedb:rm": "docker rm message-db",
-    "seed": "node seed-message.mjs",
-    "start": "node index.mjs"
+    "messagedb:reset": "yarn messagedb:down; yarn messagedb:rm; yarn messagedb:up;",
+    "messagedb:kill": "yarn messagedb:down; yarn messagedb:rm;",
+    "seed": "node seed-messages.mjs",
+    "start": "node server.mjs"
   },
   "repository": {
     "type": "git",

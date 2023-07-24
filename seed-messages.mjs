@@ -15,33 +15,108 @@ async function write() {
     logLevel: Levels.Verbose,
   });
 
-  const categories = ['categoryOne', 'categoryTwo', 'categoryThree'];
-  const streamsIds = [
-    '7fe9848c-80f3-454e-b07c-c2bff2bbd933',
-    'b886c722-6ae1-4c65-a33e-1810323667ab',
-    '6a23ece8-1b9b-4057-a04f-3c02f3660924',
+  const bulkProcessProcessCommand = new Message({
+    id: '4e260c91-cce8-4500-8639-214b84c64fa6',
+    type: 'Process',
+    streamName: 'bulkProcessor:command-417e4705aee1415f8583243b8c403af3-12345',
+    data: {
+      vehicles: [
+        {
+          make: 'mini',
+          model: 'Cooper S Clubman',
+          status: 'active',
+          vin: 'WMWLV7C06R2U29581',
+        }
+      ]
+    },
+    metadata: {
+      traceId: '04e57e34-e65a-4607-9f3b-585373883e62',
+    },
+  });
+
+  const bulkProcessProcessProcessingEvent = new Message({
+    id: 'a4675d2e-ef6e-4929-a84a-ca6959956468',
+    type: 'Processing',
+    streamName: 'bulkProcessor-417e4705aee1415f8583243b8c403af3-12345',
+    data: {
+      vehicles: [
+        {
+          make: 'mini',
+          model: 'Cooper S Clubman',
+          status: 'active',
+          vin: 'WMWLV7C06R2U29581',
+        }
+      ],
+    },
+    metadata: {
+      traceId: '04e57e34-e65a-4607-9f3b-585373883e62',
+      causationMessageGlobalPosition: 1,
+      causationMessagePosition: 0,
+      causationMessageStreamName: 'bulkProcessor:command-417e4705aee1415f8583243b8c403af3-12345',
+    },
+  });
+
+  const pipelineProcessCommand = new Message({
+    id: '1df3dbd0-2b9c-4e1d-8523-fe9cc48f3682',
+    type: 'Process',
+    streamName: 'pipeline:command-417e4705aee1415f8583243b8c403af3-12345-WMWLV7C06R2U29581',
+    data: {
+      make: 'mini',
+      model: 'Cooper S Clubman',
+      status: 'active',
+      vin: 'WMWLV7C06R2U29581',
+    },
+    metadata: {
+      traceId: '04e57e34-e65a-4607-9f3b-585373883e62',
+      causationMessageGlobalPosition: 2,
+      causationMessagePosition: 0,
+      causationMessageStreamName: 'bulkProcessor-417e4705aee1415f8583243b8c403af3-12345',
+    },
+  });
+
+  const pipelineProcessingEvent = new Message({
+    id: 'ded24348-5c84-4b4b-8b03-092e9d446096',
+    type: 'Processing',
+    streamName: 'pipeline-417e4705aee1415f8583243b8c403af3-12345-WMWLV7C06R2U29581',
+    data: {
+      make: 'mini',
+      model: 'Cooper S Clubman',
+      status: 'active',
+      vin: 'WMWLV7C06R2U29581',
+    },
+    metadata: {
+      traceId: '04e57e34-e65a-4607-9f3b-585373883e62',
+      causationMessageGlobalPosition: 3,
+      causationMessagePosition: 0,
+      causationMessageStreamName: 'pipeline:command-417e4705aee1415f8583243b8c403af3-12345-WMWLV7C06R2U29581',
+    },
+  });
+
+  const pipelineVinValidatedEvent = new Message({
+    id: 'a2eeea61-bdf5-44d1-8a08-5583ee3f84c2',
+    type: 'VinValidated',
+    streamName: 'pipeline-417e4705aee1415f8583243b8c403af3-12345-WMWLV7C06R2U29581',
+    data: {
+      validationLogicVersion: 1
+    },
+    metadata: {
+      traceId: '04e57e34-e65a-4607-9f3b-585373883e62',
+      causationMessageGlobalPosition: 4,
+      causationMessagePosition: 1,
+      causationMessageStreamName: 'pipeline-417e4705aee1415f8583243b8c403af3-12345-WMWLV7C06R2U29581',
+    },
+  });
+
+  const messages = [
+    bulkProcessProcessCommand,
+    bulkProcessProcessProcessingEvent,
+    pipelineProcessCommand,
+    pipelineProcessingEvent,
+    pipelineVinValidatedEvent,
   ];
-  const types = ['SomeType', 'AnotherType', 'ThisType', 'ThatType'];
 
-  function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
-  }
-
-  for (let i = 0; i < 10; i++) {
-    const streamName = `${categories[getRandomInt(categories.length)]}-${streamsIds[getRandomInt(streamsIds.length)]}`;
-    const type = types[getRandomInt(types.length)]
-
-    const message = new Message({
-      id: uuid({ disableEntropyCache: true }),
-      type,
-      streamName,
-      data: {},
-      metadata: {
-        traceId: uuid({ disableEntropyCache: true })
-      },
-    });
-    
-    await writer.write(message);
+  for (let i = 0; i < messages.length; i++) {
+    await writer.write(messages[i]);
   }
 
   const result = await writer.db.query('select count(*) from messages;', []);

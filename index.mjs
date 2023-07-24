@@ -1,115 +1,115 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import {
-  Message,
-  MessageDbReader,
-  Levels,
-} from 'message-db-connector';
-import open, { openApp, apps } from 'open';
+const categoriesList = document.getElementById('categorySelection');
+const messagesTable = document.getElementById('messagesTable');
+const traceSearchField = document.getElementById('traceSearch');
+const traceSearchButton = document.getElementById('submitTraceSearch');
 
-import { env } from './env.mjs';
+const baseUrl = 'http://localhost:8000'
 
-const readerPromise = MessageDbReader.Make({
-  pgConnectionConfig: {
-    connectionString: env.MESSAGE_DB_CONNECTION_STRING
-  },
-  logLevel: Levels.Verbose,
-});
+// Define event handlers
 
-function getCategory(stream) {
-  return stream.substring(0, stream.indexOf('-'));
+// Handle the dropdown change
+const debounceTimeMS = 1000;
+let debounce = null;
+async function handleCategoryChange(event) {
+  const now = Date.now();
+  const inDebounce = (debounce && debounce + debounceTimeMS > now);
+  if (inDebounce)
+    return; // Noop
+  debounce = now;
+
+  clearMessagesTable();
+  const category = event.target.value;
+
+  // Get all the streams
+  const { streams } = await fetch(`${baseUrl}/category/${category}/streams`).then(res => res.json());
+
+  // Get all the messages for those streams and
+  // put them in the table
+  for (const stream of streams) {
+    const { messages } = await fetch(`${baseUrl}/stream/${stream}`).then(res => res.json());
+
+    for (const message of messages) {
+      messagesTable.appendChild(createMessageTableRow(message))
+    }
+  }
 }
 
-const categories = [];
-const categoriesLookup = new Set();
-const streamsLookup = {};
+// Handle the searching for a trace id
+async function handleTraceSearch() {
+  const traceId = traceSearchField.value;
 
-const fastify = Fastify({
-  logger: true,
-});
-
-fastify.register(cors, {
-  origin: true
-});
-
-// Get all the categories
-fastify.route({
-  method: 'GET',
-  url: '/',
-  handler: async (req, res) => {
-    const SQL = 'SELECT DISTINCT stream_name FROM messages;'; 
-    const streams = (await (await readerPromise).db.query(SQL)).rows;
-
-    for (const { stream_name: stream } of streams) {
-      const category = getCategory(stream);
-      if (!categoriesLookup.has(category)) {
-        categoriesLookup.add(category);
-        categories.push(category);
-      }
-
-      if (!streamsLookup[category]) {
-        streamsLookup[category] = {};
-      }
-
-      if (!streamsLookup[category][stream]) {
-        streamsLookup[category][stream] = true;
-      }
-    }
-
-    console.log(JSON.stringify(streamsLookup, null, 2));
-
-    res.send({ categories });
-  },
-});
-
-fastify.route({
-  method: 'GET',
-  url: '/category/:category/streams',
-  handler: (req, res) => {
-    console.log(req.params)
-    const { params: { category } } = req;
-    const streams = [];
-
-    for (const stream of Object.keys(streamsLookup[category])) {
-      streams.push(stream);
-    }
-
-    res.send({ streams });
-  }
-});
-
-fastify.route({
-  method: 'GET',
-  url: '/stream/:stream',
-  handler: async (req, res) => {
-    const { params: { stream } } = req;
-    const SQL = 'SELECT * FROM get_stream_messages($1)'
-    const messages = (await (await readerPromise).db.query(SQL, [stream])).rows;
-
-    res.send({ messages });
-  },
-});
-
-fastify.route({
-  method: 'GET',
-  url: '/message/:id',
-  handler: async (req, res) => {
-    const { params: { id } } = req;
-    console.log('id', id);
-    const SQL = `SELECT * FROM messages WHERE id = '${id}'`;
-    const message = (await (await readerPromise).db.query(SQL)).rows[0];
-
-    res.send({ message });
-  }
-});
-
-fastify.listen({ port: 8000 }, (error, address) => {
-  if (error) {
-    fastify.log.error(error);
-    process.exit(1);
+  if (!traceId) {
+    alert('Please provide a trace id');
+    return;
   }
 
-  console.log(address);
-});
+  const { messages } = await fetch(`${baseUrl}/trace/${traceId}`).then(res => res.json());
 
-open('./index.html', {app: { name: apps.browser }});
+  renderMessagesGraph(messages);
+}
+
+// Define element creators/resets
+function createCategoryOption(category) {
+  const categoryOption = document.createElement('option');
+  categoryOption.innerText = category;
+  categoryOption.value = category;
+
+  return categoryOption
+}
+
+function createMessageTableRow(message) {
+  const tr = document.createElement('tr');
+  const {
+    id,
+    stream_name,
+    type,
+    position,
+    global_position,
+    data,
+    metadata,
+    time
+  } = message;
+  tr.innerHTML = 
+  `<td>${id}</td>
+  <td>${stream_name}</td>
+  <td>${type}</td>
+  <td>${position}</td>
+  <td>${global_position}</td>
+  <td>
+    <code>
+      ${data}
+    </code>
+  </td>
+  <td>
+    <code>
+      ${metadata}
+    </code>
+  </td>
+  <td>${new Date(time).toLocaleString()}</td>`
+
+  return tr;
+}
+
+function clearMessagesTable() {
+  const rows = Array.from(document.querySelectorAll('#messagesTable tr'));
+  rows.shift(); // Removes the header rows
+
+  for (const row of rows) {
+    row.remove();
+  }
+}
+
+setTimeout(async () => {
+  // Add event listeners
+  categoriesList.addEventListener('change', handleCategoryChange);
+  traceSearchButton.addEventListener('click', handleTraceSearch);
+
+  const categories = await fetch('http://localhost:8000/categories')
+    .then(res => res.json())
+    .then(res => res.categories);
+
+  for (const category of categories) {
+    const option = createCategoryOption(category);
+    categoriesList.appendChild(option);
+  }
+}, 0);
