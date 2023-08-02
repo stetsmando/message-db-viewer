@@ -100,7 +100,6 @@ function clearMessagesTable() {
 }
 
 setTimeout(async () => {
-  // Add event listeners
   categoriesList.addEventListener('change', handleCategoryChange);
   traceSearchButton.addEventListener('click', handleTraceSearch);
 

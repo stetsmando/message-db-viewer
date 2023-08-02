@@ -3,6 +3,7 @@ const { forceSimulation } = d3;
 
 const graphMessageDisplay = document.getElementById('graphMessage');
 const svg = d3.select('#container');
+const group = svg.append('g');
 const width = Number.parseInt(svg.attr('width'));
 const height = Number.parseInt(svg.attr('height'));
 const centerX = width / 2;
@@ -18,15 +19,31 @@ function messageToNode(message) {
   }
 }
 
+function normalizeStreamName(streamName) {
+  const pos = streamName.indexOf(':command');
+  if (pos > -1) {
+    const [category, id] = streamName.split(':command');
+    return category + id;
+  }
+
+  return streamName;
+}
+
 function responseDataToGraph(messages) {
   const nodes = [];
-  const links = [];
+  const causationLinks = [];
+  const streamLinks = [];
   const globalPositionLookUp = {};
+  const streamsLookup = {};
 
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
-    const { global_position, metadata: { causationMessageGlobalPosition } } = message;
-    globalPositionLookUp[global_position] = i
+    const {
+      stream_name: streamName,
+      global_position: globalPosition,
+      metadata: { causationMessageGlobalPosition }
+    } = message;
+    globalPositionLookUp[globalPosition] = i
     const node = messageToNode(message);
     nodes.push(node);
 
@@ -35,13 +52,51 @@ function responseDataToGraph(messages) {
         throw new Error('Failed to build the graph!');
       }
       const target = globalPositionLookUp[causationMessageGlobalPosition];
-      links.push({ source: i, target, distance: GRAPH_LINK_DISTANCE});
+      causationLinks.push({
+        source: i,
+        target,
+        distance: GRAPH_LINK_DISTANCE,
+        stroke: 'black',
+        strokeWidth: '2',
+      });
     }
+
+    const normalizedStreamName = normalizeStreamName(streamName);
+
+    if (!streamsLookup[normalizedStreamName]) {
+      streamsLookup[normalizedStreamName] = [];
+    }
+
+    streamsLookup[normalizedStreamName].push(i)
   }
+
+  // Brute force way, iterate over each 'stream name' and build a link manually
+  // It would be nice if we only ever had 1 connection between two nodes, regardless of it's type
+
+  Object.keys(streamsLookup).forEach(key => {
+    const items = streamsLookup[key];
+    console.log({
+      key,
+      items
+    })
+    for (let i = items.length - 1; i > 0; i--) {
+      streamLinks.push({
+        source: items[i],
+        target: items[i-1],
+        distance: GRAPH_LINK_DISTANCE,
+        stroke: 'green',
+        strokeDashArray: '4',
+        strokeWidth: '2',
+      });
+    }
+  });
 
   nodes[0].selected = true;
 
-  return [nodes, links];
+  return [nodes, [
+    ...streamLinks,
+    ...causationLinks,
+  ]];
 }
 
 function renderMessagesGraph(messages) {
@@ -57,7 +112,7 @@ function renderMessagesGraph(messages) {
   })
 
   const simulation = forceSimulation(nodes)
-    .force('charge', d3.forceManyBody().strength(-50))
+    // .force('charge', d3.forceManyBody().strength(0))
     .force('link', d3.forceLink(links).distance(link => link.distance))
     .force('center', d3.forceCenter(centerX, centerY));
 
@@ -74,25 +129,27 @@ function renderMessagesGraph(messages) {
         // click
         nodes[0].selected = false;
         graphMessageDisplay.innerText = JSON.stringify(node.data, null, 2);
-        simulation.alpha(1);
+        simulation.alpha(.2);
         simulation.restart();
       }
     })
     .on('drag', (event, node) => {
       node.fx = event.x;
       node.fy = event.y;
-      simulation.alpha(1);
+      simulation.alpha(.2);
       simulation.restart();
     })
 
-  const lines = svg
+  const lines = group 
     .selectAll('line')
     .data(links)
     .enter()
     .append('line')
-    .attr('stroke', 'black')
+    .attr('stroke', node => node.stroke)
+    .attr('stroke-dasharray', node => node.strokeDashArray || '')
+    .attr('stroke-width', node => node.strokeWidth)
 
-  const circles = svg
+  const circles = group
     .selectAll('circle')
     .data(nodes)
     .enter()
@@ -103,7 +160,7 @@ function renderMessagesGraph(messages) {
     .attr('stroke-width', node => node.selected ? 3 : 0)
     .call(drag);
 
-  const text = svg
+  const text = group
     .selectAll('text')
     .data(nodes)
     .enter()
@@ -130,3 +187,14 @@ function renderMessagesGraph(messages) {
       .attr('y2', link => link.target.y)
   });
 }
+
+const zoom = d3.zoom()
+  .scaleExtent([0.5, 32])
+  .on('zoom', zoomed);
+
+function zoomed(zoomEvent) {
+  const { transform } = zoomEvent;
+  group.attr('transform', transform);
+}
+
+svg.call(zoom);

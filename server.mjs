@@ -43,6 +43,8 @@ fastify.route({
     const messages = (await (await readerPromise).db.query(SQL)).rows;
     messages.sort((a, b) => a.globalPosition - b.globalPosition);
 
+    console.log(JSON.stringify(messages, null, 2));
+
     res.send({ messages })    
   }
 });
@@ -89,6 +91,8 @@ fastify.route({
     for (const stream of Object.keys(streamsLookup[category])) {
       streams.push(stream);
     }
+
+    console.log(streams);
 
     res.send({ streams });
   }

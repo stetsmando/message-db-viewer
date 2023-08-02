@@ -7,6 +7,7 @@ const treeSVGHeight = Number.parseInt(treeSvg.attr('height'));
 const treeData = {
   type: 'Process',
   fill: blue,
+  strokeWidth: 3,
   children: [
     {
       type: 'Processing',
@@ -19,6 +20,12 @@ const treeData = {
             {
               type: 'Processing',
               fill: orange,
+              children: [
+                {
+                  type: 'VinValidated',
+                  fill: orange,
+                }
+              ],
             }
           ]
         },
@@ -31,10 +38,6 @@ const treeData = {
               fill: orange,
             }
           ]
-        },
-        {
-          type: 'Processed',
-          fill: orange,
         },
       ]
     }
@@ -89,7 +92,9 @@ const treeNode = treeSvg.append('g')
 
 const treeCircles = treeNode.append('circle')
   .attr('fill', node => node.data.fill)
-  .attr('r', 10);
+  .attr('r', 10)
+  .attr('stroke', node => node.data.strokeWidth ? green : 'black')
+  .attr('stroke-width', node => node.data.strokeWidth || 0)
 
 treeNode.append('text')
   .attr('dy', '0.31em')
