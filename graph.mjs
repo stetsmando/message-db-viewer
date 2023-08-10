@@ -112,9 +112,20 @@ function renderMessagesGraph(messages) {
   })
 
   const simulation = forceSimulation(nodes)
-    // .force('charge', d3.forceManyBody().strength(0))
     .force('link', d3.forceLink(links).distance(link => link.distance))
     .force('center', d3.forceCenter(centerX, centerY));
+
+  // FIXME: I'm sure there's a way to do this with the alpha value of the simulation
+  // but I can't be bothered to figure that out at the moment.
+  setTimeout(() => {
+    if (!document.getElementById('togglePhysics').checked) {
+      circles
+      .each((node) => {
+        node.fx = node.x;
+        node.fy = node.y;
+      })
+    }
+  }, 500);
 
   let clickStart = null;
 
