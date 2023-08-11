@@ -200,7 +200,7 @@ function renderMessagesGraph(messages) {
 }
 
 const zoom = d3.zoom()
-  .scaleExtent([0.5, 32])
+  .scaleExtent([0, 1.5])
   .on('zoom', zoomed);
 
 function zoomed(zoomEvent) {
